@@ -6,3 +6,14 @@
 .project
 .readme.md.html
 .springBeans
+
+
+# all the .idea stuff
+.idea/
+
+# IntelliJ
+out/
+
+
+
+
