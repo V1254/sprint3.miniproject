@@ -22,7 +22,7 @@ import app.controller.*
 
 
 @ContextConfiguration
-@WebMvcTest(controllers=[])
+@WebMvcTest(controllers=[DisplayTodoController.class,OrganizerController.class])
 class OrganizerSpec extends Specification{
 
     @Autowired
@@ -128,5 +128,57 @@ class OrganizerSpec extends Specification{
         result.andExpect(model().attribute('todo',hasProperty('priority',equalTo(4))))
 
     }
+    // Part B:
+
+    def '7: Whenever the organizer has no todos, the HTTP GET request /next should show the view NoTodo' (){
+        given: 'the context of the controller is setup'
+        and: 'the organizer has no todos'
+        OrganizerApp.organizer.todos = new ArrayList<>()
+        when: ' I perfom HTTP GET request /next'
+        result = mockMvc.perform(get('/next'))
+        then: 'i should see the view NoTodo'
+        result.andExpect(view().name('NoTodo'))
+    }
+
+    def '8: Whenever the organizer has todos, the HTTP GET request /create should show the view CreateTodo' (){
+        given: 'the context of the controller is setup'
+        and: 'the organizer has todos'
+        OrganizerApp.organizer.todos = new ArrayList<>()
+        OrganizerApp.organizer.todos.add(new Todo('1','1'))
+        when: ' the HTTP GET request /create is made'
+        result = mockMvc.perform(get('/create'))
+        then: 'the view CreateTodo is shown'
+        result.andExpect(view().name('CreateTodo'))
+    }
+
+    def '9:The HTTP POST request /create with values should redirect to URL /list '(){
+        given: 'the context of the controller is setup'
+        when: 'i perform HTTP POST request /create with values'
+        result = mockMvc.perform(post('/create')
+                        .param('task','')
+                        .param('description','my Description')
+                        .param('priority','0')
+                        .param('cancel',''))
+        then: 'i should be redirected to /list'
+        result.andExpect(redirectedUrl('/list'))
+    }
+
+    def '10:The HTTP POST request /create should show the view CreateTodo and the model attribute todo should have errors '(){
+        given: 'the context of the controller is setup'
+        when: 'i perform HTTP POST request /create with values'
+        result = mockMvc.perform(post('/create')
+                .param('task','')
+                .param('description','')
+                .param('priority','0')
+                .param('important','1')
+                .param('add',''))
+        then: 'the view CreateTodo is displayed'
+        result.andExpect(view().name('CreateTodo'))
+        and: 'the model attribute todo should have errors'
+        result.andExpect(model().attributeHasErrors('todo'))
+    }
+
+
+
 
 }
