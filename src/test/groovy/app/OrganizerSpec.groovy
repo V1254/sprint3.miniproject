@@ -144,7 +144,7 @@ class OrganizerSpec extends Specification{
         given: 'the context of the controller is setup'
         and: 'the organizer has todos'
         OrganizerApp.organizer.todos = new ArrayList<>()
-        OrganizerApp.organizer.todos.add(new Todo('1','1'))
+        OrganizerApp.organizer.addTodo(new Todo('1','1'))
         when: ' the HTTP GET request /create is made'
         result = mockMvc.perform(get('/create'))
         then: 'the view CreateTodo is shown'
@@ -178,7 +178,116 @@ class OrganizerSpec extends Specification{
         result.andExpect(model().attributeHasErrors('todo'))
     }
 
+    // Part C:
+
+    def '11: can create todos'(){
+        given: 'the context of the controller is setup'
+        and: 'an empty organizer'
+        OrganizerApp.organizer.todos = new ArrayList<>()
+        and: 'a todo with priority 10'
+        when: 'i perform a post request /create with that todo'
+        result = mockMvc.perform(post('/create')
+                .param('task','my Task')
+                .param('description','my Description')
+                .param('priority','10')
+                .param('important','1')
+                .param('add',''))
+        then: 'the todo is added to the organizer'
+        assertThat(OrganizerApp.organizer.todos.size(),equalTo(1))
+        and: 'the todo has the priority of 10'
+        assertThat(OrganizerApp.organizer.todos.get(0),hasProperty('priority',equalTo(10)))
+        and: 'im redirected to /list'
+        result.andExpect(redirectedUrl('/list'))
+    }
+
+    def '12: can delete todos'(){
+        given: 'the context of the controller is setup'
+        and: ' a todo with id 10 in organizer '
+        OrganizerApp.organizer.todos = new ArrayList<>()
+        Todo test = new Todo('test','test')
+        test.setId(10)
+        OrganizerApp.organizer.addTodo(test)
+        when: 'i perfom a get /delete with id = 10'
+        result = mockMvc.perform(get('/delete').param('id','10'))
+        then: 'the todo with id 10 is deleted from the organizer'
+        assertThat(OrganizerApp.organizer.todos.size(),equalTo(0))
+        and: ' i am redirected to /list'
+        result.andExpect(redirectedUrl('/list'))
+
+    }
+
+    def '13: organizer with a todo should be displayed correctly'(){
+        given: 'the context of the controller is setup'
+        and: 'a non-empty organizer'
+        Todo t = new Todo('1','1')
+        t.setId(10)
+        OrganizerApp.organizer.todos = new ArrayList<>()
+        OrganizerApp.organizer.addTodo(t)
+        when: 'i perfom a get request'
+        result = mockMvc.perform(get('/list'))
+        then: 'the model has the attribute todos'
+        result.andExpect(model().attributeExists('todos'))
+        and : 'the view ListTodos is shown'
+        result.andExpect(view().name('ListTodos'))
+    }
 
 
+    def '14: given a non important task with priority 110 it is rejected'(){
+        given: 'the context of the controller is setup'
+        when: 'i perform a /post request with priority 110 and non important'
+        result = mockMvc.perform(post('/create')
+                .param('task','my Task')
+                .param('description','my Description')
+                .param('priority','110')
+                .param('add',''))
+        then: 'the view CreateTodo is displayed'
+        result.andExpect(view().name('CreateTodo'))
+        and: 'the model has priority errors'
+        result.andExpect(model().attributeHasFieldErrors('todo','priority'))
+    }
+
+    def '15: a description cannot be longer than 20 characters'(){
+        given: 'the context of the controller is setup'
+        when: 'i perform a /post request with a description greater than 20'
+        String toAdd = '12345678910111213141516'
+        result = mockMvc.perform(post('/create')
+                .param('task','my Task')
+                .param('description',toAdd)
+                .param('priority','90')
+                .param('add',''))
+        then: 'the view CreateTodo is displayed'
+        result.andExpect(view().name('CreateTodo'))
+        and: 'the model has Description Errors'
+        result.andExpect(model().attributeHasFieldErrors('todo','description'))
+    }
+
+    def '16: a non important task with less than 20 characters is accepted'(){
+        given: 'the context of the controller is setup'
+        when: 'i perform a /post request with a description less than 20'
+        result = mockMvc.perform(post('/create')
+                .param('task','my Task')
+                .param('description','my Description')
+                .param('priority','90')
+                .param('add',''))
+        then: 'redirected to /list'
+        result.andExpect(redirectedUrl('/list'))
+
+    }
+
+    def '17: task name cannot equal task description'(){
+        given: 'the context of the controller is setup'
+        when: 'i perform a /post request with a task with the same description'
+        result = mockMvc.perform(post('/create')
+                .param('task','my Task')
+                .param('description','my Task')
+                .param('priority','90')
+                .param('important','1')
+                .param('add','')
+        )
+        then: 'the view CreateTodo is displayed'
+        result.andExpect(view().name('CreateTodo'))
+        and: 'the model has task errors'
+        result.andExpect(model().attributeHasFieldErrors('todo','task'))
+    }
 
 }
